@@ -1,0 +1,189 @@
+import React, { useState } from 'react';
+import { apiService } from '../services/apiService';
+import { formatRelativeDate } from '../utils/dateUtils';
+import { sortByPriority } from '../utils/taskUtils';
+
+const DailyPlanner = ({ tasks, onUpdateTask, onAddTask }) => {
+  const [loading, setLoading] = useState(false);
+  const [plan, setPlan] = useState(null);
+  const [error, setError] = useState(null);
+  const [selectedTasks, setSelectedTasks] = useState(new Set());
+
+  const incompleteTasks = tasks.filter(t => t.status !== 'done');
+
+  const handleGeneratePlan = async () => {
+    setLoading(true);
+    setError(null);
+    setSelectedTasks(new Set()); // Reset selections
+    try {
+      const result = await apiService.generateDailyPlan(incompleteTasks);
+      setPlan(result);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleTask = (index) => {
+    const newSelected = new Set(selectedTasks);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedTasks(newSelected);
+  };
+
+  const handleAddToCalendar = () => {
+    if (selectedTasks.size === 0) {
+      alert('Please select at least one task to add to calendar');
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    selectedTasks.forEach(index => {
+      const taskItem = plan.tasks[index];
+
+      // Build description with subtasks
+      let description = `Scheduled: ${taskItem.startTime} - ${taskItem.endTime}\n\n${taskItem.reason || ''}`;
+
+      if (taskItem.subtasks && taskItem.subtasks.length > 0) {
+        description += '\n\nSteps to complete:\n';
+        taskItem.subtasks.forEach((subtask, i) => {
+          description += `${i + 1}. ${subtask}\n`;
+        });
+      }
+
+      const newTask = {
+        title: taskItem.title,
+        description: description.trim(),
+        priority: 'medium',
+        category: 'Planner',
+        dueDate: today,
+        status: 'todo'
+      };
+      onAddTask(newTask);
+    });
+
+    alert(`${selectedTasks.size} task(s) added to calendar!`);
+    setSelectedTasks(new Set()); // Clear selections
+  };
+
+  return (
+    <div className="daily-planner">
+      <div className="planner-header">
+        <h2>Daily Planner</h2>
+        <button
+          className="btn-primary"
+          onClick={handleGeneratePlan}
+          disabled={loading || incompleteTasks.length === 0}
+        >
+          {loading ? 'Generating...' : '🤖 Generate AI Plan'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="error-message">
+          <p>Error: {error}</p>
+          <p className="error-hint">Make sure the Flask backend is running on port 5000</p>
+        </div>
+      )}
+
+      {incompleteTasks.length === 0 && (
+        <div className="empty-state">
+          <p>All tasks completed! Great job! 🎉</p>
+        </div>
+      )}
+
+      {!plan && incompleteTasks.length > 0 && (
+        <div className="planner-empty">
+          <p>Click "Generate AI Plan" to get an optimized daily schedule based on your tasks.</p>
+          <div className="task-summary">
+            <h3>Your Tasks ({incompleteTasks.length})</h3>
+            <div className="task-list-simple">
+              {sortByPriority(incompleteTasks).map(task => (
+                <div key={task.id} className="task-preview">
+                  <span className="task-title">{task.title}</span>
+                  <span className={`task-priority ${task.priority}`}>{task.priority}</span>
+                  {task.dueDate && (
+                    <span className="task-due">{formatRelativeDate(task.dueDate)}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {plan && (
+        <div className="generated-plan">
+          <div className="plan-header">
+            <h3>Today's Recommended Plan</h3>
+            <button
+              className="btn-add-to-calendar"
+              onClick={handleAddToCalendar}
+              disabled={selectedTasks.size === 0}
+            >
+              📅 Add Selected to Calendar ({selectedTasks.size})
+            </button>
+          </div>
+          {plan.suggestion && <p className="plan-suggestion">{plan.suggestion}</p>}
+
+          <div className="hourly-schedule">
+            {plan.tasks && plan.tasks.map((taskItem, index) => {
+              const startTime = taskItem.startTime || `${8 + index}:00`;
+              const endTime = taskItem.endTime || `${8 + index + 1}:00`;
+              const isSelected = selectedTasks.has(index);
+
+              return (
+                <div key={index} className={`schedule-item ${isSelected ? 'selected' : ''}`}>
+                  <div className="schedule-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleToggleTask(index)}
+                      id={`task-${index}`}
+                    />
+                  </div>
+                  <div className="schedule-time">
+                    <div className="time-range">
+                      <span className="start-time">{startTime}</span>
+                      <span className="time-separator">-</span>
+                      <span className="end-time">{endTime}</span>
+                    </div>
+                    {taskItem.timeEstimate && (
+                      <span className="duration">{taskItem.timeEstimate}</span>
+                    )}
+                  </div>
+                  <div className="schedule-task">
+                    <div className="task-header">
+                      <h4>{taskItem.title}</h4>
+                      <span className="task-order">#{index + 1}</span>
+                    </div>
+                    {taskItem.reason && (
+                      <p className="task-reason">{taskItem.reason}</p>
+                    )}
+                    {taskItem.subtasks && taskItem.subtasks.length > 0 && (
+                      <div className="task-subtasks">
+                        <h5>Steps to complete:</h5>
+                        <ul>
+                          {taskItem.subtasks.map((subtask, subIndex) => (
+                            <li key={subIndex}>{subtask}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DailyPlanner;
