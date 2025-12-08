@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { apiService } from '../services/apiService';
+import { toast } from 'react-hot-toast';
 
 const Brainstorming = ({ categories, onAddTask }) => {
   const [context, setContext] = useState('');
@@ -11,7 +12,7 @@ const Brainstorming = ({ categories, onAddTask }) => {
   const handleBrainstorm = async (e) => {
     e.preventDefault();
     if (!context.trim()) {
-      alert('Please enter a context or goal');
+      toast.error('Please enter a context or goal');
       return;
     }
 
@@ -22,8 +23,10 @@ const Brainstorming = ({ categories, onAddTask }) => {
     try {
       const result = await apiService.brainstorm(context, taskType);
       setSuggestions(result.suggestions || []);
+      toast.success('Ideas generated');
     } catch (err) {
       setError(err.message);
+      toast.error(err.message || 'Failed to generate ideas');
     } finally {
       setLoading(false);
     }
@@ -38,7 +41,7 @@ const Brainstorming = ({ categories, onAddTask }) => {
       dueDate: new Date().toISOString().split('T')[0]
     };
     onAddTask(task);
-    alert('Task added to your list!');
+    toast.success('Task added to your list!');
   };
 
   return (
@@ -80,15 +83,22 @@ const Brainstorming = ({ categories, onAddTask }) => {
           type="submit"
           className="btn-primary"
           disabled={loading}
+          aria-busy={loading}
         >
           {loading ? 'Brainstorming...' : '💡 Generate Ideas'}
         </button>
       </form>
 
+      {loading && (
+        <div className="loading-state" role="status" aria-live="polite">
+          Thinking up suggestions...
+        </div>
+      )}
+
       {error && (
-        <div className="error-message">
+        <div className="error-message" role="alert">
           <p>Error: {error}</p>
-          <p className="error-hint">Make sure the Flask backend is running on port 5000</p>
+          <p className="error-hint">Make sure the Flask backend is running on port 4001</p>
         </div>
       )}
 

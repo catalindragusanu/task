@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'react-hot-toast';
 
 const CategoryFilter = ({ categories, selectedCategory, onSelectCategory, onAddCategory }) => {
   const [showAddForm, setShowAddForm] = useState(false);
@@ -11,8 +12,9 @@ const CategoryFilter = ({ categories, selectedCategory, onSelectCategory, onAddC
       if (success) {
         setNewCategory('');
         setShowAddForm(false);
+        toast.success('Category added');
       } else {
-        alert('Category already exists');
+        toast.error('Category already exists');
       }
     }
   };
@@ -23,6 +25,7 @@ const CategoryFilter = ({ categories, selectedCategory, onSelectCategory, onAddC
         <button
           className={`category-chip ${selectedCategory === 'all' ? 'active' : ''}`}
           onClick={() => onSelectCategory('all')}
+          aria-label="Show all tasks"
         >
           All Tasks
         </button>
@@ -31,6 +34,7 @@ const CategoryFilter = ({ categories, selectedCategory, onSelectCategory, onAddC
             key={category}
             className={`category-chip ${selectedCategory === category ? 'active' : ''}`}
             onClick={() => onSelectCategory(category)}
+            aria-label={`Filter by ${category}`}
           >
             {category}
           </button>
@@ -38,6 +42,7 @@ const CategoryFilter = ({ categories, selectedCategory, onSelectCategory, onAddC
         <button
           className="category-chip add-category"
           onClick={() => setShowAddForm(!showAddForm)}
+          aria-label="Add category"
         >
           + Add
         </button>

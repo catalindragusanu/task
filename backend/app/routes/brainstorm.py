@@ -1,10 +1,62 @@
+import logging
 from flask import Blueprint, request, jsonify, current_app
+from werkzeug.exceptions import BadRequest
 from app.services.ai_service import AIService
+from app.extensions import limiter
 
 bp = Blueprint('brainstorm', __name__, url_prefix='/api')
 
 
+logger = logging.getLogger(__name__)
+
+
+def _validate_brainstorm_payload(data: dict):
+    if not data or 'context' not in data:
+        raise BadRequest('Missing required field: context')
+
+    context = data.get('context', '')
+    if not isinstance(context, str):
+        raise BadRequest('Context must be a string')
+    context = context.strip()
+    if not context:
+        raise BadRequest('Context cannot be empty')
+    if len(context) > 500:
+        raise BadRequest('Context is too long (500 char max)')
+
+    task_type = data.get('taskType', 'general')
+    allowed_types = {'general', 'project', 'creative', 'research', 'business'}
+    if task_type not in allowed_types:
+        raise BadRequest('Invalid taskType')
+
+    return context, task_type
+
+
+def _validate_plan_payload(data: dict):
+    if not data or 'tasks' not in data:
+        raise BadRequest('Missing required field: tasks')
+
+    tasks = data.get('tasks', [])
+    if not isinstance(tasks, list):
+        raise BadRequest('Tasks must be an array')
+    if len(tasks) > 200:
+        raise BadRequest('Too many tasks in payload (max 200)')
+
+    sanitized = []
+    for task in tasks:
+        if not isinstance(task, dict):
+            continue
+        sanitized.append({
+            'id': task.get('id'),
+            'title': str(task.get('title', 'Untitled'))[:120],
+            'priority': task.get('priority', 'medium'),
+            'dueDate': task.get('dueDate'),
+            'category': task.get('category')
+        })
+    return sanitized
+
+
 @bp.route('/brainstorm', methods=['POST'])
+@limiter.limit(lambda: current_app.config['AI_ROUTE_RATE_LIMIT'])
 def brainstorm():
     """
     Generate AI-powered task suggestions
@@ -27,20 +79,8 @@ def brainstorm():
     }
     """
     try:
-        data = request.get_json()
-
-        if not data or 'context' not in data:
-            return jsonify({
-                'error': 'Missing required field: context'
-            }), 400
-
-        context = data.get('context', '').strip()
-        task_type = data.get('taskType', 'general')
-
-        if not context:
-            return jsonify({
-                'error': 'Context cannot be empty'
-            }), 400
+        data = request.get_json(silent=True) or {}
+        context, task_type = _validate_brainstorm_payload(data)
 
         # Generate suggestions using AI service (Ollama)
         ai_service = AIService()
@@ -50,19 +90,23 @@ def brainstorm():
             'suggestions': suggestions
         }), 200
 
+    except BadRequest as e:
+        return jsonify({'error': str(e)}), 400
     except ValueError as e:
+        logger.exception("ValueError in brainstorm endpoint")
         return jsonify({
             'error': str(e)
-        }), 500
+        }), 503
 
     except Exception as e:
-        print(f"Error in brainstorm endpoint: {str(e)}")
+        logger.exception("Error in brainstorm endpoint")
         return jsonify({
             'error': 'An error occurred while generating suggestions. Please try again.'
         }), 500
 
 
 @bp.route('/generate-plan', methods=['POST'])
+@limiter.limit(lambda: current_app.config['AI_ROUTE_RATE_LIMIT'])
 def generate_plan():
     """
     Generate an optimized daily plan from tasks
@@ -93,19 +137,8 @@ def generate_plan():
     }
     """
     try:
-        data = request.get_json()
-
-        if not data or 'tasks' not in data:
-            return jsonify({
-                'error': 'Missing required field: tasks'
-            }), 400
-
-        tasks = data.get('tasks', [])
-
-        if not isinstance(tasks, list):
-            return jsonify({
-                'error': 'Tasks must be an array'
-            }), 400
+        data = request.get_json(silent=True) or {}
+        tasks = _validate_plan_payload(data)
 
         # Generate daily plan using AI service (Ollama)
         ai_service = AIService()
@@ -113,13 +146,16 @@ def generate_plan():
 
         return jsonify(plan), 200
 
+    except BadRequest as e:
+        return jsonify({'error': str(e)}), 400
     except ValueError as e:
+        logger.exception("ValueError in generate-plan endpoint")
         return jsonify({
             'error': str(e)
-        }), 500
+        }), 503
 
     except Exception as e:
-        print(f"Error in generate-plan endpoint: {str(e)}")
+        logger.exception("Error in generate-plan endpoint")
         return jsonify({
             'error': 'An error occurred while generating the daily plan. Please try again.'
         }), 500

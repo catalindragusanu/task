@@ -1,14 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { storageService } from '../services/storageService';
+import { toast } from 'react-hot-toast';
 
 export const useTasks = () => {
   const [tasks, setTasks] = useState([]);
+  const isInitialLoad = useRef(true);
+  const lastDeletedRef = useRef(null);
 
   // Load tasks from localStorage on mount
   useEffect(() => {
     const loadedTasks = storageService.getTasks();
     setTasks(loadedTasks);
   }, []);
+
+  // Persist tasks with debounce to avoid excessive writes
+  useEffect(() => {
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
+
+    try {
+      storageService.saveTasksDebounced(tasks, () => {
+        toast.error('Unable to save tasks. Local storage may be full.');
+      });
+    } catch (error) {
+      console.error('Error scheduling task save', error);
+      toast.error('Unable to save tasks locally.');
+    }
+  }, [tasks]);
 
   /**
    * Add a new task
@@ -21,9 +41,7 @@ export const useTasks = () => {
       createdAt: new Date().toISOString(),
       status: task.status || 'todo'
     };
-    const newTasks = [...tasks, newTask];
-    setTasks(newTasks);
-    storageService.saveTasks(newTasks);
+    setTasks(prev => [...prev, newTask]);
     return newTask;
   };
 
@@ -33,11 +51,9 @@ export const useTasks = () => {
    * @param {Object} updates - Fields to update
    */
   const updateTask = (id, updates) => {
-    const newTasks = tasks.map(task =>
+    setTasks(prev => prev.map(task =>
       task.id === id ? { ...task, ...updates } : task
-    );
-    setTasks(newTasks);
-    storageService.saveTasks(newTasks);
+    ));
   };
 
   /**
@@ -45,9 +61,20 @@ export const useTasks = () => {
    * @param {number} id - Task ID
    */
   const deleteTask = (id) => {
-    const newTasks = tasks.filter(task => task.id !== id);
-    setTasks(newTasks);
-    storageService.saveTasks(newTasks);
+    setTasks(prev => {
+      const target = prev.find(t => t.id === id);
+      if (target) {
+        lastDeletedRef.current = target;
+      }
+      return prev.filter(task => task.id !== id);
+    });
+  };
+
+  const undoDelete = () => {
+    if (!lastDeletedRef.current) return;
+    const restored = lastDeletedRef.current;
+    lastDeletedRef.current = null;
+    setTasks(prev => [...prev, restored]);
   };
 
   /**
@@ -82,6 +109,7 @@ export const useTasks = () => {
     addTask,
     updateTask,
     deleteTask,
+    undoDelete,
     getTasksByCategory,
     getTasksByStatus,
     getTasksByDate

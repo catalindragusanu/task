@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { getTodayISO } from '../utils/dateUtils';
+import { toast } from 'react-hot-toast';
 
 const TaskForm = ({ categories, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -13,10 +14,11 @@ const TaskForm = ({ categories, onSubmit, onCancel }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.title.trim()) {
-      alert('Please enter a task title');
+      toast.error('Please enter a task title');
       return;
     }
     onSubmit(formData);
+    toast.success('Task created');
   };
 
   const handleChange = (field, value) => {

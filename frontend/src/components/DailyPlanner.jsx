@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { apiService } from '../services/apiService';
 import { formatRelativeDate } from '../utils/dateUtils';
 import { sortByPriority } from '../utils/taskUtils';
+import { toast } from 'react-hot-toast';
 
 const DailyPlanner = ({ tasks, onUpdateTask, onAddTask }) => {
   const [loading, setLoading] = useState(false);
@@ -37,7 +38,7 @@ const DailyPlanner = ({ tasks, onUpdateTask, onAddTask }) => {
 
   const handleAddToCalendar = () => {
     if (selectedTasks.size === 0) {
-      alert('Please select at least one task to add to calendar');
+      toast.error('Select at least one task to add to calendar.');
       return;
     }
 
@@ -67,7 +68,7 @@ const DailyPlanner = ({ tasks, onUpdateTask, onAddTask }) => {
       onAddTask(newTask);
     });
 
-    alert(`${selectedTasks.size} task(s) added to calendar!`);
+    toast.success(`${selectedTasks.size} task(s) added to calendar!`);
     setSelectedTasks(new Set()); // Clear selections
   };
 
@@ -79,15 +80,21 @@ const DailyPlanner = ({ tasks, onUpdateTask, onAddTask }) => {
           className="btn-primary"
           onClick={handleGeneratePlan}
           disabled={loading || incompleteTasks.length === 0}
+          aria-busy={loading}
         >
           {loading ? 'Generating...' : '🤖 Generate AI Plan'}
         </button>
       </div>
+      {loading && (
+        <div className="loading-state" role="status" aria-live="polite">
+          Generating your plan...
+        </div>
+      )}
 
       {error && (
-        <div className="error-message">
+        <div className="error-message" role="alert">
           <p>Error: {error}</p>
-          <p className="error-hint">Make sure the Flask backend is running on port 5000</p>
+          <p className="error-hint">Make sure the Flask backend is running on port 4001</p>
         </div>
       )}
 

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import TaskForm from './TaskForm';
 import TaskItem from './TaskItem';
 import CategoryFilter from './CategoryFilter';
 import { filterTasksBySearch, sortByDueDate } from '../utils/taskUtils';
+import { toast } from 'react-hot-toast';
 
-const TaskList = ({ tasks, categories, onAddTask, onUpdateTask, onDeleteTask, onAddCategory }) => {
+const TaskList = ({ tasks, categories, onAddTask, onUpdateTask, onDeleteTask, onUndoDelete, onAddCategory }) => {
   const [showForm, setShowForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -13,14 +14,14 @@ const TaskList = ({ tasks, categories, onAddTask, onUpdateTask, onDeleteTask, on
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [newDate, setNewDate] = useState('');
 
-  const filteredTasks = filterTasksBySearch(
+  const filteredTasks = useMemo(() => filterTasksBySearch(
     selectedCategory === 'all'
       ? tasks
       : tasks.filter(t => t.category === selectedCategory),
     searchQuery
-  );
+  ), [selectedCategory, tasks, searchQuery]);
 
-  const sortedTasks = sortByDueDate(filteredTasks);
+  const sortedTasks = useMemo(() => sortByDueDate(filteredTasks), [filteredTasks]);
 
   const handleToggleSelectionMode = () => {
     setSelectionMode(!selectionMode);
@@ -40,7 +41,7 @@ const TaskList = ({ tasks, categories, onAddTask, onUpdateTask, onDeleteTask, on
 
   const handleReschedule = () => {
     if (selectedTasks.size === 0) {
-      alert('Please select at least one task to reschedule');
+      toast.error('Select at least one task to reschedule.');
       return;
     }
     setShowDatePicker(true);
@@ -48,7 +49,7 @@ const TaskList = ({ tasks, categories, onAddTask, onUpdateTask, onDeleteTask, on
 
   const handleConfirmReschedule = () => {
     if (!newDate) {
-      alert('Please select a date');
+      toast.error('Please select a date.');
       return;
     }
 
@@ -56,11 +57,34 @@ const TaskList = ({ tasks, categories, onAddTask, onUpdateTask, onDeleteTask, on
       onUpdateTask(taskId, { dueDate: newDate });
     });
 
-    alert(`${selectedTasks.size} task(s) rescheduled to ${newDate}`);
+    toast.success(`${selectedTasks.size} task(s) rescheduled to ${newDate}`);
     setSelectedTasks(new Set());
     setShowDatePicker(false);
     setNewDate('');
     setSelectionMode(false);
+  };
+
+  const handleDelete = (taskId) => {
+    onDeleteTask(taskId);
+    if (!onUndoDelete) {
+      toast.success('Task deleted');
+      return;
+    }
+    toast.custom((t) => (
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <span>Task deleted</span>
+        <button
+          onClick={() => {
+            onUndoDelete();
+            toast.dismiss(t.id);
+            toast.success('Task restored');
+          }}
+          style={{ padding: '6px 10px', border: 'none', borderRadius: '6px', background: '#2563eb', color: '#fff', cursor: 'pointer' }}
+        >
+          Undo
+        </button>
+      </div>
+    ), { duration: 4000 });
   };
 
   return (
@@ -69,13 +93,15 @@ const TaskList = ({ tasks, categories, onAddTask, onUpdateTask, onDeleteTask, on
         <h2>My Tasks</h2>
         <div className="header-actions">
           {!selectionMode && (
-            <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
+            <button className="btn-primary" onClick={() => setShowForm(!showForm)} aria-label="Create a new task">
               {showForm ? 'Cancel' : '+ New Task'}
             </button>
           )}
           <button
             className={`btn-selection ${selectionMode ? 'active' : ''}`}
             onClick={handleToggleSelectionMode}
+            aria-pressed={selectionMode}
+            aria-label="Toggle task selection mode"
           >
             {selectionMode ? 'Cancel Selection' : '📅 Reschedule Tasks'}
           </button>
@@ -108,13 +134,14 @@ const TaskList = ({ tasks, categories, onAddTask, onUpdateTask, onDeleteTask, on
           {showDatePicker && (
             <div className="date-picker-modal">
               <label htmlFor="newDate">Select new due date:</label>
-              <input
-                type="date"
-                id="newDate"
-                value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
-                className="date-input"
-              />
+          <input
+            type="date"
+            id="newDate"
+            value={newDate}
+            onChange={(e) => setNewDate(e.target.value)}
+            className="date-input"
+            aria-label="New due date"
+          />
               <div className="modal-actions">
                 <button className="btn-confirm" onClick={handleConfirmReschedule}>
                   Confirm Reschedule
@@ -135,6 +162,7 @@ const TaskList = ({ tasks, categories, onAddTask, onUpdateTask, onDeleteTask, on
           className="search-input"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          aria-label="Search tasks"
         />
         <CategoryFilter
           categories={categories}
@@ -159,13 +187,14 @@ const TaskList = ({ tasks, categories, onAddTask, onUpdateTask, onDeleteTask, on
                     checked={selectedTasks.has(task.id)}
                     onChange={() => handleToggleTask(task.id)}
                     id={`select-${task.id}`}
+                    aria-label={`Select task ${task.title}`}
                   />
                 </div>
               )}
               <TaskItem
                 task={task}
                 onUpdate={onUpdateTask}
-                onDelete={onDeleteTask}
+                onDelete={handleDelete}
               />
             </div>
           ))

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { formatRelativeDate, isOverdue } from '../utils/dateUtils';
 import { getPriorityColor, getStatusColor } from '../utils/taskUtils';
+import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 
-const TaskItem = ({ task, onUpdate, onDelete }) => {
+const TaskItem = memo(({ task, onUpdate, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(task);
 
@@ -45,6 +46,7 @@ const TaskItem = ({ task, onUpdate, onDelete }) => {
           type="checkbox"
           checked={task.status === 'done'}
           onChange={() => handleStatusChange(task.status === 'done' ? 'todo' : 'done')}
+          aria-label={task.status === 'done' ? 'Mark task as todo' : 'Mark task as done'}
         />
       </div>
 
@@ -66,11 +68,15 @@ const TaskItem = ({ task, onUpdate, onDelete }) => {
       </div>
 
       <div className="task-actions">
-        <button className="btn-icon" onClick={() => setIsEditing(true)} title="Edit">✏️</button>
-        <button className="btn-icon" onClick={() => onDelete(task.id)} title="Delete">🗑️</button>
+        <button className="btn-icon" onClick={() => setIsEditing(true)} title="Edit" aria-label="Edit task">
+          <FiEdit2 aria-hidden="true" />
+        </button>
+        <button className="btn-icon" onClick={() => onDelete(task.id)} title="Delete" aria-label="Delete task">
+          <FiTrash2 aria-hidden="true" />
+        </button>
       </div>
     </div>
   );
-};
+});
 
 export default TaskItem;

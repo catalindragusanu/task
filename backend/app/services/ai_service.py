@@ -1,6 +1,9 @@
 import os
 import json
+import logging
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 class AIService:
@@ -9,14 +12,16 @@ class AIService:
     def __init__(self):
         self.base_url = os.getenv('OLLAMA_URL', 'http://localhost:11434')
         self.model = os.getenv('OLLAMA_MODEL', 'llama2')
+        self.connect_timeout = float(os.getenv('OLLAMA_CONNECT_TIMEOUT', 5))
+        self.read_timeout = float(os.getenv('OLLAMA_READ_TIMEOUT', 30))
 
         # Verify Ollama is running
         try:
             response = requests.get(f"{self.base_url}/api/tags", timeout=2)
             if response.status_code != 200:
-                print(f"Warning: Ollama may not be running at {self.base_url}")
+                logger.warning("Ollama may not be running", extra={"base_url": self.base_url})
         except requests.exceptions.RequestException:
-            print(f"Warning: Could not connect to Ollama at {self.base_url}. Make sure Ollama is installed and running.")
+            logger.warning("Could not connect to Ollama", extra={"base_url": self.base_url})
 
     def generate_brainstorm(self, context, task_type='general'):
         """
@@ -29,6 +34,7 @@ class AIService:
         Returns:
             list: List of suggested tasks with title, description, and priority
         """
+        self._check_ollama_available()
         system_prompt = "You are a helpful task planning assistant. Generate practical, actionable task suggestions in JSON format."
         user_prompt = self._build_brainstorm_prompt(context, task_type)
 
@@ -46,7 +52,7 @@ class AIService:
                         "num_predict": 1000
                     }
                 },
-                timeout=60
+                timeout=(self.connect_timeout, self.read_timeout)
             )
 
             if response.status_code != 200:
@@ -57,11 +63,14 @@ class AIService:
 
             return suggestions
 
+        except requests.exceptions.ReadTimeout as e:
+            logger.exception("Ollama timed out in generate_brainstorm")
+            raise ValueError("Ollama timed out while generating suggestions. Is the model running?")
         except requests.exceptions.RequestException as e:
-            print(f"Error connecting to Ollama: {str(e)}")
-            raise Exception(f"Failed to connect to Ollama. Make sure it's running: {str(e)}")
+            logger.exception("Error connecting to Ollama")
+            raise ValueError(f"Failed to connect to Ollama. Make sure it's running: {str(e)}")
         except Exception as e:
-            print(f"Error in generate_brainstorm: {str(e)}")
+            logger.exception("Error in generate_brainstorm")
             raise Exception(f"Failed to generate brainstorming suggestions: {str(e)}")
 
     def generate_daily_plan(self, tasks):
@@ -80,6 +89,7 @@ class AIService:
                 'tasks': []
             }
 
+        self._check_ollama_available()
         system_prompt = "You are a productivity coach. Create optimized daily plans that prioritize tasks effectively based on urgency, importance, and effort."
         user_prompt = self._build_daily_plan_prompt(tasks)
 
@@ -97,7 +107,7 @@ class AIService:
                         "num_predict": 1500
                     }
                 },
-                timeout=90
+                timeout=(self.connect_timeout, self.read_timeout)
             )
 
             if response.status_code != 200:
@@ -108,12 +118,24 @@ class AIService:
 
             return plan
 
+        except requests.exceptions.ReadTimeout as e:
+            logger.exception("Ollama timed out in generate_daily_plan")
+            raise ValueError("Ollama timed out while generating the plan. Is the model running?")
         except requests.exceptions.RequestException as e:
-            print(f"Error connecting to Ollama: {str(e)}")
-            raise Exception(f"Failed to connect to Ollama. Make sure it's running: {str(e)}")
+            logger.exception("Error connecting to Ollama")
+            raise ValueError(f"Failed to connect to Ollama. Make sure it's running: {str(e)}")
         except Exception as e:
-            print(f"Error in generate_daily_plan: {str(e)}")
+            logger.exception("Error in generate_daily_plan")
             raise Exception(f"Failed to generate daily plan: {str(e)}")
+
+    def _check_ollama_available(self):
+        """Fast check to avoid long timeouts when Ollama is down"""
+        try:
+            resp = requests.get(f"{self.base_url}/api/tags", timeout=2)
+            if resp.status_code != 200:
+                raise ValueError("Ollama is not responding (non-200). Start ollama serve.")
+        except requests.exceptions.RequestException as exc:
+            raise ValueError(f"Ollama is not reachable: {exc}")
 
     def _build_brainstorm_prompt(self, context, task_type):
         """Build prompt for brainstorming"""

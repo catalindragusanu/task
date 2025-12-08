@@ -38,7 +38,7 @@ npm install
 npm start
 ```
 
-The app will open at `http://localhost:3000`
+The app will open at `http://localhost:4000`
 
 ## Available Scripts
 
@@ -129,7 +129,7 @@ All tasks and categories are stored in browser's `localStorage`:
 
 ### Backend API URL
 
-By default, the app connects to `http://localhost:5000`. To change this:
+By default, the app connects to `http://localhost:4001`. To change this:
 
 1. Create a `.env` file in the frontend directory
 2. Add: `REACT_APP_API_URL=your_backend_url`
@@ -153,9 +153,10 @@ By default, the app connects to `http://localhost:5000`. To change this:
 
 ### AI Features Not Working
 
-1. Ensure backend is running on port 5000
-2. Check that `OPENAI_API_KEY` is set in backend `.env`
-3. Check browser console for error messages
+1. Ensure backend is running on port 4001
+2. Check that Ollama is running: `ollama serve`
+3. Verify Ollama model is installed: `ollama list`
+4. Check browser console for error messages
 
 ### Tasks Not Persisting
 

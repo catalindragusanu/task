@@ -91,7 +91,6 @@ class NotificationService {
    * Check for tasks that are due and notify
    */
   checkDueTasks(tasks) {
-    const now = new Date();
     const dueTasks = tasks.filter(task => {
       // Skip completed tasks
       if (task.status === 'done') return false;

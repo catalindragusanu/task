@@ -8,9 +8,9 @@
 
 ## Build, Test, and Development Commands
 - Frontend setup: `cd frontend && npm install`.
-- Frontend dev server: `npm start` (http://localhost:3000). Build: `npm run build`. Tests (Jest from CRA): `npm test`.
+- Frontend dev server: `npm start` (http://localhost:4000). Build: `npm run build`. Tests (Jest from CRA): `npm test`.
 - Backend setup: `cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && cp .env.example .env`.
-- Backend run: `python run.py` (defaults http://localhost:5000). Set `OPENAI_API_KEY` in `.env` before AI routes.
+- Backend run: `python run.py` (defaults http://localhost:4001). Ensure Ollama is running (`ollama serve`) before using AI routes.
 
 ## Coding Style & Naming
 - JavaScript/React: Prefer functional components, hooks, and camelCase for variables/functions; PascalCase for components. Keep stateful logic in hooks/services where possible. CSS lives in `frontend/src/styles/App.css`; co-locate new styles when scoped.

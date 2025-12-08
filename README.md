@@ -24,7 +24,7 @@ A modern web application for managing tasks with AI-powered brainstorming and da
 
 ### Backend
 - **Flask** - Python web framework
-- **OpenAI API** - GPT-3.5-turbo for AI features
+- **Ollama** - Local AI (llama3.2:latest) for privacy and zero API costs
 - **Flask-CORS** - Cross-origin resource sharing
 
 ## Quick Start
@@ -33,7 +33,7 @@ A modern web application for managing tasks with AI-powered brainstorming and da
 
 - Node.js 14+ and npm
 - Python 3.8+
-- OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
+- Ollama ([Download here](https://ollama.ai))
 
 ### Installation
 
@@ -43,17 +43,21 @@ git clone <repository-url>
 cd task-manager
 ```
 
-2. **Set up the backend**
+2. **Install Ollama and pull the model**
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
+# Download from https://ollama.ai, then:
+ollama pull llama3.2
 ```
 
-3. **Set up the frontend**
+3. **Set up the backend**
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+4. **Set up the frontend**
 ```bash
 cd ../frontend
 npm install
@@ -61,17 +65,43 @@ npm install
 
 ### Running the Application
 
-1. **Start the backend** (in the `backend` directory):
+**Option 1: Automated (Recommended)**
 ```bash
+./start.sh
+```
+This starts all services automatically and logs to `logs/` directory.
+
+**Option 2: Manual (ports: frontend 4000, backend 4001)**
+
+Terminal 1 - Ollama:
+```bash
+ollama serve
+```
+
+Terminal 2 - Backend (port 4001):
+```bash
+cd backend
+source venv/bin/activate
 python run.py
 ```
-Backend will run on `http://localhost:5000`
 
-2. **Start the frontend** (in the `frontend` directory):
+Terminal 3 - Frontend (port 4000):
 ```bash
+cd frontend
+# copy and adjust .env if needed
+cp .env.example .env
 npm start
 ```
-Frontend will open at `http://localhost:3000`
+
+Access the app at `http://localhost:4000`
+
+### Smoke check (backend)
+With the backend running locally:
+```bash
+cd backend
+python scripts/smoke.py
+```
+Set `API_KEY` if you enabled auth.
 
 ## Project Structure
 
@@ -170,14 +200,17 @@ See [backend/README.md](backend/README.md) for full API documentation.
 
 **Backend** (`.env` in `backend/`):
 ```
-OPENAI_API_KEY=your_api_key_here
+OLLAMA_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2:latest
 FLASK_ENV=development
 FLASK_DEBUG=True
+PORT=4001
 ```
 
-**Frontend** (optional `.env` in `frontend/`):
+**Frontend** (`.env` in `frontend/`):
 ```
-REACT_APP_API_URL=http://localhost:5000/api
+PORT=4000
+REACT_APP_API_URL=http://localhost:4001/api
 ```
 
 ## Development
@@ -199,19 +232,21 @@ REACT_APP_API_URL=http://localhost:5000/api
 
 ### Backend Issues
 
-**"OPENAI_API_KEY environment variable is not set"**
-- Ensure `.env` file exists in `backend/` directory
-- Verify `OPENAI_API_KEY` is set correctly
-- Restart the Flask server
+**Ollama not responding**
+- Ensure Ollama is running: `ollama serve`
+- Verify model is installed: `ollama list`
+- Check health endpoint: `curl http://localhost:4001/api/health`
 
-**Port 5000 already in use**
-- Change port in `backend/.env`: `PORT=5001`
-- Update frontend API URL accordingly
+**Ports already in use**
+- Backend uses port 4001
+- Frontend uses port 4000
+- Use `./start.sh` which handles conflicts automatically
 
 ### Frontend Issues
 
 **AI features not working**
-- Ensure backend is running on port 5000
+- Ensure Ollama is running: `ollama serve`
+- Ensure backend is running on port 4001
 - Check browser console for errors
 - Verify CORS is enabled in backend
 

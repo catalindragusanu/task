@@ -136,6 +136,19 @@ body {
   transform: scale(1.2);
 }
 
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #FAEB92;
+  outline-offset: 2px;
+}
+
+.loading-state {
+  margin: 1rem 0;
+  color: #FAEB92;
+}
+
 /* Task List */
 .task-list-container {
   background: #000000;

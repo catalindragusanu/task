@@ -1,20 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import Navbar from './components/Navbar';
 import TaskList from './components/TaskList';
-import DailyPlanner from './components/DailyPlanner';
 import Brainstorming from './components/Brainstorming';
-import Calendar from './components/Calendar';
 import { useTasks } from './hooks/useTasks';
 import { useCategories } from './hooks/useCategories';
 import { notificationService } from './utils/notificationService';
+import { toast } from 'react-hot-toast';
+
+const DailyPlanner = lazy(() => import('./components/DailyPlanner'));
+const Calendar = lazy(() => import('./components/Calendar'));
 
 function App() {
   const [currentView, setCurrentView] = useState('tasks');
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
     return localStorage.getItem('taskManager_notifications') === 'true';
   });
-  const { tasks, addTask, updateTask, deleteTask } = useTasks();
-  const { categories, addCategory, deleteCategory } = useCategories();
+  const { tasks, addTask, updateTask, deleteTask, undoDelete } = useTasks();
+  const { categories, addCategory } = useCategories();
 
   // Initialize notifications when enabled
   useEffect(() => {
@@ -38,7 +40,7 @@ function App() {
         localStorage.setItem('taskManager_notifications', 'true');
         notificationService.startPeriodicCheck(tasks, 15);
       } else {
-        alert('Please enable notifications in your browser settings to use this feature.');
+        toast.error('Enable notifications in your browser settings to use reminders.');
       }
     } else {
       setNotificationsEnabled(false);
@@ -65,6 +67,7 @@ function App() {
             onAddTask={addTask}
             onUpdateTask={handleUpdateTask}
             onDeleteTask={deleteTask}
+            onUndoDelete={undoDelete}
             onAddCategory={addCategory}
           />
         );
@@ -104,7 +107,9 @@ function App() {
         onNotificationToggle={handleNotificationToggle}
       />
       <main className="container">
-        {renderView()}
+        <Suspense fallback={<div className="loading-state">Loading view...</div>}>
+          {renderView()}
+        </Suspense>
       </main>
     </div>
   );

@@ -59,7 +59,7 @@ OPENAI_API_KEY=your_api_key_here
 python run.py
 ```
 
-The server will start on `http://localhost:5000`
+The server will start on `http://localhost:4001`
 
 ## API Endpoints
 
@@ -171,10 +171,12 @@ backend/
 
 ### Environment Variables
 
-- `OPENAI_API_KEY` - Required for AI features
+- `OLLAMA_URL` - Ollama API URL (default: http://localhost:11434)
+- `OLLAMA_MODEL` - AI model to use (default: llama3.2:latest)
 - `FLASK_ENV` - `development` or `production`
 - `FLASK_DEBUG` - `True` or `False`
-- `PORT` - Server port (default: 5000)
+- `PORT` - Server port (default: 4001)
+- `CORS_ORIGINS` - Allowed CORS origins (default: http://localhost:4000)
 
 ## Error Handling
 

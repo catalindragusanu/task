@@ -8,7 +8,24 @@ A task manager web application with AI-powered features including task brainstor
 
 ## Running the Application
 
-### Backend (Flask API - Port 5001)
+### Quick Start (Recommended)
+
+Use the automated startup script to run all services:
+
+```bash
+./start.sh
+```
+
+This script automatically starts:
+- Ollama AI service (port 11434)
+- Backend API (port 4001)
+- Frontend (port 4000)
+
+Press `Ctrl+C` to stop all services. Logs are saved in the `logs/` directory.
+
+### Manual Start
+
+#### Backend (Flask API - Port 4001)
 
 ```bash
 cd backend
@@ -16,16 +33,14 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 python run.py
 ```
 
-**Important:** The backend runs on port **5001** (not 5000) to avoid conflicts with macOS AirPlay Receiver service.
-
-### Frontend (React - Port 3000)
+#### Frontend (React - Port 4000)
 
 ```bash
 cd frontend
 npm start
 ```
 
-### Ollama (AI Service)
+#### Ollama (AI Service)
 
 Ollama must be running for AI features to work:
 
@@ -138,18 +153,28 @@ Backend provides two main AI endpoints:
 
 ## Configuration Files
 
-- `backend/.env` - Ollama URL, model name, Flask port
-- `frontend/src/services/apiService.js` - API base URL (`http://localhost:5001`)
+- `backend/.env` - Ollama URL, model name, Flask port (4001)
+- `frontend/.env` (copy from `.env.example`) - Frontend port (4000) and API URL (http://localhost:4001/api)
+- `frontend/src/services/apiService.js` - API base URL (`http://localhost:4001`)
 - `frontend/package.json` - React dependencies and scripts
+- `start.sh` - Automated startup script for all services
 
 ## Troubleshooting
 
-**Port 5000 already in use:** Backend uses port 5001 to avoid macOS AirPlay conflicts
+**Ports already in use:**
+- Frontend runs on port 4000
+- Backend runs on port 4001
+- Use `./start.sh` which automatically handles port conflicts
 
 **Ollama not responding:**
 - Check `ollama serve` is running
 - Verify model installed: `ollama pull llama3.2`
 - Check `/api/health` endpoint for Ollama status
+
+**Start script fails:**
+- Ensure backend venv exists: `cd backend && python3 -m venv venv`
+- Install backend deps: `source venv/bin/activate && pip install -r requirements.txt`
+- Install frontend deps: `cd frontend && npm install`
 
 **Calendar styling issues:** Override with `!important` flags in CSS (react-calendar has strong defaults)
 

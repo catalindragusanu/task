@@ -3,6 +3,10 @@ const STORAGE_KEYS = {
   CATEGORIES: 'taskManager_categories'
 };
 
+const SAVE_DELAY = 300;
+let tasksSaveTimer = null;
+let pendingTasksSnapshot = null;
+
 export const storageService = {
   // Tasks
   getTasks: () => {
@@ -20,8 +24,27 @@ export const storageService = {
       return true;
     } catch (error) {
       console.error('Error saving tasks:', error);
-      return false;
+      throw error;
     }
+  },
+
+  saveTasksDebounced: (tasks, onError) => {
+    pendingTasksSnapshot = tasks;
+    if (tasksSaveTimer) {
+      clearTimeout(tasksSaveTimer);
+    }
+    tasksSaveTimer = setTimeout(() => {
+      try {
+        storageService.saveTasks(pendingTasksSnapshot);
+      } catch (error) {
+        console.error('Error saving tasks (debounced):', error);
+        if (onError) {
+          onError(error);
+        }
+      } finally {
+        tasksSaveTimer = null;
+      }
+    }, SAVE_DELAY);
   },
 
   // Categories
